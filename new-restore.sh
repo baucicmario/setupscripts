@@ -13,9 +13,7 @@ bash "$SCRIPT_DIR/dependencies.sh"
 
 if groups $USER | grep -q '\bdocker\b'; then
 
-    if [-f "$MARKER_FILE" ]; then
-        source "$MARKER_FILE"
-    fi
+    source "$MARKER_FILE"
     cd "$SCRIPT_DIR"
     bash "$SCRIPT_DIR/dockge/dockge-base-setup.sh"
     bash "$SCRIPT_DIR/dockge/restore-dockge-containers.sh" "$STACKS_DIR" "$BACKUP_LOCATION" "$CONTAINERS_VAR_NAME"
