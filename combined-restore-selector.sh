@@ -16,7 +16,7 @@ if [ ! -f "$MARKER_FILE" ]; then
 
 
     # Your pre-reboot commands here
-    bash ./cockpit/install-cockpit-suite.sh
+    bash ./cockpit/select-modules.sh
     bash ./docker/docker-setup.sh
     bash ./smb/smb-setup.sh
     # autorun.conf creation for immichbackup.sh by asking for inputs BACKUP_ROOT="/mnt/st/system-backup-2025-11-01" RESTORE_DIR="/mnt/st/immich_restored" CONTAINERS_DIR="/mnt/st/immich_restored/containers"
