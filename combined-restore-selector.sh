@@ -2,7 +2,7 @@
 set -e
 
 # Marker file to know if we're resuming after reboot
-MARKER_FILE="./variables.conf"
+MARKER_FILE="~/variables.conf"
 
 # Determine the full path to this script
 SCRIPT_PATH="$(realpath "$0")"
@@ -56,7 +56,7 @@ if [ ! -f "$MARKER_FILE" ]; then
         echo "STACKS_DIR=\"$STACKS_DIR\""
         echo "RESTORE_DIR=\"$RESTORE_DIR\""
         echo "CONTAINERS_DIR=\"$CONTAINERS_DIR\""
-    } > ./variables.conf
+    } > ~/variables.conf
 
     #----------------------------------------------------------------------------------------------------------------------------------------------
     # Create marker to indicate post-reboot continuation
@@ -72,7 +72,7 @@ else
     echo "=== Phase 2: Resuming after reboot ==="
 
     echo "Sourcing variables from variables.conf..."
-    source ./variables.conf
+    source ~/variables.conf
 
 
     # Your post-reboot commands here
