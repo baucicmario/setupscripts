@@ -1,4 +1,4 @@
 #!/bin/bash
 set -e
 
-echo "launching startup script..."
+echo "launching startup script...yohohoho"
