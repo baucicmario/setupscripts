@@ -8,10 +8,10 @@ RED="\e[31m"; GREEN="\e[32m"; YELLOW="\e[33m"; BLUE="\e[36m"; RESET="\e[0m"; BOL
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 # 🧠 Ensure whiptail
-if ! command -v whiptail >/dev/null 2>&1; then
-  echo -e "${YELLOW}⚙️ Installing 'whiptail'...${RESET}"
-  sudo apt update -y && sudo apt install -y whiptail
-fi
+#if ! command -v whiptail >/dev/null 2>&1; then
+#  echo -e "${YELLOW}⚙️ Installing 'whiptail'...${RESET}"
+#  sudo apt update -y && sudo apt install -y whiptail
+#fi
 
 # Helper to check installed packages
 is_installed() { dpkg -l "$1" &>/dev/null && echo "ON" || echo "OFF"; }

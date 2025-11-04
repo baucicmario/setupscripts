@@ -19,12 +19,6 @@ line
 
 CURRENT_USER=$(whoami)
 
-# --- Ensure curl is installed ---
-if ! command -v curl >/dev/null 2>&1; then
-    echo -e "${YELLOW}⚙️ Installing curl...${RESET}"
-    sudo apt update -y && sudo apt install -y curl
-fi
-
 # --- Download Docker install script ---
 echo -e "${BLUE}⬇️  Downloading Docker installation script...${RESET}"
 curl -fsSL https://get.docker.com -o get-docker.sh

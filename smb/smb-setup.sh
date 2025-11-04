@@ -28,14 +28,14 @@ shift
 MNT_FOLDERS=("$@")
 
 # --- Check Samba installation ---
-if ! command -v smbd >/dev/null 2>&1; then
-  echo -e "${YELLOW}📦 Samba not found. Installing...${RESET}"
-  sudo apt update && sudo apt install -y samba
-  echo -e "${GREEN}✅ Samba installed successfully.${RESET}"
-else
-  echo -e "${GREEN}✅ Samba is already installed.${RESET}"
-fi
-line
+#if ! command -v smbd >/dev/null 2>&1; then
+#  echo -e "${YELLOW}📦 Samba not found. Installing...${RESET}"
+#  sudo apt update && sudo apt install -y samba
+#  echo -e "${GREEN}✅ Samba installed successfully.${RESET}"
+#else
+#  echo -e "${GREEN}✅ Samba is already installed.${RESET}"
+#fi
+#line
 
 # --- Set up Samba user ---
 echo -e "${BOLD}${BLUE}👤 Setting up Samba user for ${YELLOW}$CURRENT_USER${RESET}"

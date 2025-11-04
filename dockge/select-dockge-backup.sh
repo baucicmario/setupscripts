@@ -6,19 +6,11 @@ set -e
 RED="\e[31m"; GREEN="\e[32m"; YELLOW="\e[33m"; BLUE="\e[36m"; RESET="\e[0m"; BOLD="\e[1m"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
-# --- Ensure dependencies ---
-MISSING=()
-for dep in whiptail rsync pv tar docker; do
-  if ! command -v "$dep" >/dev/null 2>&1; then
-    MISSING+=("$dep")
-  fi
-done
-if [ ${#MISSING[@]} -ne 0 ]; then
-  echo -e "${YELLOW}⚙️ Installing missing dependencies: ${MISSING[*]}...${RESET}"
+# --- Ensure dependencies ---# Check for docker
+if ! command -v docker >/dev/null 2>&1; then
+  echo -e "${YELLOW}⚙️ Installing missing dependency: docker...${RESET}"
   sudo apt update -y
-  for dep in "${MISSING[@]}"; do
-    sudo apt install -y "$dep"
-  done
+  sudo apt install -y docker 
 fi
 
 # --- Prompt for stacks directory ---
