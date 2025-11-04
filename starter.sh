@@ -3,15 +3,7 @@ set -e
 
 echo "launching startup script...yohohoho"
 
-
-# --- Ensure dependencies ---
-DEPS=(whiptail docker pv tree rsync tar)
-MISSING=()
-for dep in "${DEPS[@]}"; do
-  if ! command -v "$dep" >/dev/null 2>&1; then
-    MISSING+=("$dep")
-  fi
-done
+sudo apt-get install whiptail -y
 
 # Show whiptail menu for backup or restore
 CHOICE=$(whiptail --title "Backup or Restore" --menu "Choose an action:" 15 60 2 \
