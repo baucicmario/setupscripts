@@ -99,10 +99,10 @@ else
           echo -e "${GREEN}✅ Cockpit Navigator installed.${RESET}"
           ;;
         cockpit-file-sharing)
-          sudo install_45drives_deb "cockpit-file-sharing" "(_all\.deb|_amd64\.deb)" "File Sharing"
+          install_45drives_deb "cockpit-file-sharing" "(_all\.deb|_amd64\.deb)" "File Sharing"
           ;;
         cockpit-identities)
-          sudo install_45drives_deb "cockpit-identities" "(_all\.deb|_amd64\.deb)" "Identities"
+          install_45drives_deb "cockpit-identities" "(_all\.deb|_amd64\.deb)" "Identities"
           ;;
         *)
           echo -e "${RED}❌ No installation method available for ${pkg_clean}.${RESET}"
