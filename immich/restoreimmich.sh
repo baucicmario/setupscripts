@@ -46,23 +46,23 @@ run_gauge() {
 
 # --- Accept arguments only ---
 if [ $# -ne 3 ]; then
-    echo "Usage: $0 <BACKUP_ROOT> <RESTORE_DIR> <CONTAINERS_DIR>"
+    echo "Usage: $0 <BACKUP_LOCATION> <RESTORE_DIR> <CONTAINERS_DIR>"
     exit 1
 fi
-BACKUP_ROOT="$1"
+BACKUP_LOCATION="$1"
 RESTORE_DIR="$2"
 CONTAINERS_DIR="$3"
 
 # --- Validate backup root ---
-if [ ! -d "$BACKUP_ROOT" ]; then
-    echo "❌ Backup root folder not found: $BACKUP_ROOT"
+if [ ! -d "$BACKUP_LOCATION" ]; then
+    echo "❌ Backup root folder not found: $BACKUP_LOCATION"
     exit 1
 fi
 
 # Automatically detect Immich backup folder
-BACKUP_SRC=$(find "$BACKUP_ROOT" -type d -name "immich" | sort | tail -n 1)
+BACKUP_SRC=$(find "$BACKUP_LOCATION" -type d -name "immich" | sort | tail -n 1)
 if [ -z "$BACKUP_SRC" ]; then
-    echo "❌ No 'immich' backup directory found under $BACKUP_ROOT"
+    echo "❌ No 'immich' backup directory found under $BACKUP_LOCATION"
     exit 1
 fi
 

@@ -13,32 +13,50 @@ if [ ! -f "$MARKER_FILE" ]; then
     ######################
     echo "=== Phase 1: Running before reboot ==="
 
-
-
     # Your pre-reboot commands here
     bash ./cockpit/select-modules.sh
     bash ./docker/docker-setup.sh
     bash ./smb/smb-setup.sh
-    # autorun.conf creation for immichbackup.sh by asking for inputs BACKUP_ROOT="/mnt/st/system-backup-2025-11-01" RESTORE_DIR="/mnt/st/immich_restored" CONTAINERS_DIR="/mnt/st/immich_restored/containers"
-    echo "Creating autorun.conf for immichrestore.sh..."
-    BACKUP_ROOT=$(whiptail --inputbox "Enter the root folder containing Immich backups:" 10 70 "/mnt/st/system-backup-$(date +%F)" 3>&1 1>&2 2>&3) || {
-        whiptail --msgbox "❌ Setup canceled." 8 50
-        exit 1
-    }
-    RESTORE_DIR=$(whiptail --inputbox "Enter directory to restore Immich files to:" 10 70 "/mnt/st/immich_restored" 3>&1 1>&2 2>&3) || {
-        whiptail --msgbox "❌ Setup canceled." 8 50
-        exit 1
-    }
-    CONTAINERS_DIR=$(whiptail --inputbox "Enter directory to hold Docker containers during restore:" 10 70 "/mnt/st/immich_restored/containers" 3>&1 1>&2 2>&3) || {
-        whiptail --msgbox "❌ Setup canceled." 8 50
-        exit 1
-    }
-    #saving to autorun.conf
+
+# -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+#Dockge --- Prompt for backup directory ---
+BACKUP_LOCATION=$(whiptail --inputbox "Enter the backup directory:" 10 70 "/mnt/st/system-backup-$(date +%F)" 3>&1 1>&2 2>&3)
+if [ -z "$BACKUP_LOCATION" ]; then
+  echo -e "${RED}❌ No backup parent directory entered. Exiting.${RESET}"
+  exit 1
+fi
+
+#Dockge --- Prompt for containers variable name ---
+CONTAINERS_VAR_NAME=$(whiptail --inputbox "Enter the .env files containers variable name (default: CONTAINERS_ROOT):" 10 70 "CONTAINERS_ROOT" 3>&1 1>&2 2>&3)
+if [ -z "$CONTAINERS_VAR_NAME" ]; then
+  CONTAINERS_VAR_NAME="CONTAINERS_ROOT"
+fi
+
+# IMMICH --- Prompt for restore directory ---
+RESTORE_DIR=$(whiptail --inputbox "Enter directory to restore Immich files to:" 10 70 "/mnt/st/immich_restored" 3>&1 1>&2 2>&3)
+if [ -z "$RESTORE_DIR" ]; then
+  echo -e "${RED}❌ No restore directory entered. Exiting.${RESET}"
+  exit 1
+fi
+
+# IMMICH--- Prompt for containers directory ---
+CONTAINERS_DIR="$RESTORE_DIR/containers"
+
+# Dockge --- Prompt for stacks directory ---
+STACKS_DIR="/opt/stacks"
+
+
+# -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+    #saving to variables.conf
     {
-        echo "BACKUP_ROOT=\"$BACKUP_ROOT\""
+        echo "BACKUP_LOCATION=\"$BACKUP_LOCATION\""
+        echo "CONTAINERS_VAR_NAME=\"$CONTAINERS_VAR_NAME\""
+        echo "STACKS_DIR=\"$STACKS_DIR\""
         echo "RESTORE_DIR=\"$RESTORE_DIR\""
         echo "CONTAINERS_DIR=\"$CONTAINERS_DIR\""
-    } > ./immich/autorun.conf
+    } > ./variables.conf
 
     #----------------------------------------------------------------------------------------------------------------------------------------------
     # Create marker to indicate post-reboot continuation
@@ -54,10 +72,19 @@ else
     ######################
     echo "=== Phase 2: Resuming after reboot ==="
 
+    echo "Sourcing variables from variables.conf..."
+    source ./variables.conf
 
 
     # Your post-reboot commands here
     bash ./dockge/dockge-setup.sh
+    
+    
+    # Call the restore script with the selected arguments
+    "$SCRIPT_DIR/dockge/restore-dockge-containers.sh" "$STACKS_DIR" "$BACKUP_LOCATION" "$CONTAINERS_VAR_NAME"
+
+    "$SCRIPT_DIR/immich/restoreimmich.sh" "$BACKUP_LOCATION" "$RESTORE_DIR" "$CONTAINERS_DIR"
+
     bash ./immich/restoreimmich.sh
     bash ./dockge/restore-containers.sh
 

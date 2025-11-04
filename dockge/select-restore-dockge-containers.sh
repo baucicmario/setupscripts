@@ -29,17 +29,18 @@ if [ -z "$STACKS_DIR" ]; then
 fi
 
 # --- Prompt for backup parent directory ---
-BACKUP_PARENT_DIR=$(whiptail --inputbox "Enter the backup parent directory:" 10 70 "/mnt/st" 3>&1 1>&2 2>&3)
-if [ -z "$BACKUP_PARENT_DIR" ]; then
+BACKUP_LOCATION=$(whiptail --inputbox "Enter the backup parent directory:" 10 70 "/mnt/st" 3>&1 1>&2 2>&3)
+if [ -z "$BACKUP_LOCATION" ]; then
   echo -e "${RED}❌ No backup parent directory entered. Exiting.${RESET}"
   exit 1
 fi
 
 # --- Prompt for containers variable name ---
-CONTAINERS_VAR_NAME=$(whiptail --inputbox "Enter the .env files containers variable name (default: CONTAINERS_ROOT):" 10 70 "CONTAINERS_ROOT" 3>&1 1>&2 2>&3)
-if [ -z "$CONTAINERS_VAR_NAME" ]; then
-  CONTAINERS_VAR_NAME="CONTAINERS_ROOT"
+BACKUP_LOCATION=$(whiptail --inputbox "Enter the backup directory:" 10 70 "/mnt/st/system-backup-$(date +%F)" 3>&1 1>&2 2>&3)
+if [ -z "$BACKUP_LOCATION" ]; then
+  echo -e "${RED}❌ No backup parent directory entered. Exiting.${RESET}"
+  exit 1
 fi
 
 # Call the restore script with the selected arguments
-"$SCRIPT_DIR/restore-dockge-containers.sh" "$STACKS_DIR" "$BACKUP_PARENT_DIR" "$CONTAINERS_VAR_NAME"
+"$SCRIPT_DIR/restore-dockge-containers.sh" "$STACKS_DIR" "$BACKUP_LOCATION" "$CONTAINERS_VAR_NAME"

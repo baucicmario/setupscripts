@@ -3,11 +3,11 @@
 
 # --- Accept arguments only ---
 if [ $# -ne 3 ]; then
-    echo "Usage: $0 <STACKS_DIR> <BACKUP_PARENT_DIR> <CONTAINERS_VAR_NAME>"
+    echo "Usage: $0 <STACKS_DIR> <BACKUP_LOCATION> <CONTAINERS_VAR_NAME>"
     exit 1
 fi
 STACKS_DIR="$1"
-BACKUP_PARENT_DIR="$2"
+BACKUP_LOCATION="$2"
 CONTAINERS_VAR_NAME="$3"
 
 echo "==============================="
@@ -15,17 +15,10 @@ echo " Dockge System Restore Utility"
 echo "==============================="
 
 # --- Step 0: Find latest backup ---
-LATEST_BACKUP=$(ls -td "$BACKUP_PARENT_DIR"/system-backup-* 2>/dev/null | head -n 1)
+echo "backup at: $BACKUP_LOCATION"
 
-if [ -z "$LATEST_BACKUP" ]; then
-    echo "❌ No system backups found in $BACKUP_PARENT_DIR."
-    exit 1
-fi
-
-echo "Latest backup found: $LATEST_BACKUP"
-
-STACKS_BACKUP_SRC="$LATEST_BACKUP/dockge/stacks"
-CONTAINERS_ARCHIVE_FILE="$LATEST_BACKUP/containers/containers.tar.gz"
+STACKS_BACKUP_SRC="$BACKUP_LOCATION/dockge/stacks"
+CONTAINERS_ARCHIVE_FILE="$BACKUP_LOCATION/containers/containers.tar.gz"
 
 if [ ! -d "$STACKS_BACKUP_SRC" ]; then
     echo "❌ Missing stacks backup directory: $STACKS_BACKUP_SRC"

@@ -22,8 +22,8 @@ if [ ${#MISSING[@]} -ne 0 ]; then
 fi
 
 # --- Prompt for backup root folder ---
-BACKUP_ROOT=$(whiptail --inputbox "Enter the root folder containing Immich backups:" 10 70 "/mnt/st/system-backup-$(date +%F)" 3>&1 1>&2 2>&3)
-if [ -z "$BACKUP_ROOT" ]; then
+BACKUP_LOCATION=$(whiptail --inputbox "Enter the root folder containing Immich backups:" 10 70 "/mnt/st/system-backup-$(date +%F)" 3>&1 1>&2 2>&3)
+if [ -z "$BACKUP_LOCATION" ]; then
   echo -e "${RED}❌ No backup root entered. Exiting.${RESET}"
   exit 1
 fi
@@ -43,4 +43,4 @@ if [ -z "$CONTAINERS_DIR" ]; then
 fi
 
 # Call the restore script with the selected arguments
-"$SCRIPT_DIR/restoreimmich.sh" "$BACKUP_ROOT" "$RESTORE_DIR" "$CONTAINERS_DIR"
+"$SCRIPT_DIR/restoreimmich.sh" "$BACKUP_LOCATION" "$RESTORE_DIR" "$CONTAINERS_DIR"
