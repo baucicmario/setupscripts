@@ -17,11 +17,10 @@ line
 
 CURRENT_USER=$(whoami)
 
-# --- Ensure whiptail (optional, not needed here) ---
 # --- Check arguments ---
 if [ $# -lt 2 ]; then
     echo -e "${YELLOW}Usage: $0 <smb_password> <mount_point1> <mount_point2> ...${RESET}"
-    echo -e "${YELLOW}Please run select-smb-shares.sh to select drives and provide the password first.${RESET}"
+    echo -e "${YELLOW}Please provide the Samba password and at least one mount point.${RESET}"
     exit 1
 fi
 SMB_PASSWORD="$1"
@@ -86,11 +85,11 @@ for dir in "${MNT_FOLDERS[@]}"; do
   sharename=$(basename "$dir")
   sudo tee -a /etc/samba/smb.conf > /dev/null <<EOF
 [$sharename]
-   path = $dir
-   valid users = $CURRENT_USER
-   read only = no
-   browseable = yes
-   writable = yes
+    path = $dir
+    valid users = $CURRENT_USER
+    read only = no
+    browseable = yes
+    writable = yes
 
 EOF
 done
@@ -100,10 +99,39 @@ sudo tee -a /etc/samba/smb.conf > /dev/null <<EOF
 EOF
 line
 
-# --- Restart Samba ---
-echo -e "${BLUE}🔄 Restarting Samba service...${RESET}"
-sudo systemctl restart smbd
+# --- ⭐ START: FIXED VALIDATE AND RESTART BLOCK ⭐ ---
+echo -e "${BLUE}⚙️ Validating Samba configuration...${RESET}"
+
+# Use 'testparm' to check for syntax errors
+if ! sudo testparm -s; then
+    echo -e "${RED}❌ Samba configuration is invalid! Service not restarted.${RESET}"
+    echo -e "${YELLOW}Please run 'sudo testparm' to see the full error.${RESET}"
+    exit 1
+fi
+echo -e "${GREEN}✅ Samba configuration is valid.${RESET}"
 line
+
+echo -e "${BLUE}🔄 Restarting Samba service...${RESET}"
+if ! sudo systemctl restart smbd; then
+    echo -e "${RED}❌ Failed to issue restart command to Samba.${RESET}"
+    exit 1
+fi
+
+# Give the service a second to start
+sleep 1
+
+# --- This is the new, critical check ---
+if sudo systemctl is-active --quiet smbd; then
+    echo -e "${GREEN}✅ Samba service is active and running.${RESET}"
+else
+    echo -e "${RED}❌ Samba service FAILED to start.${RESET}"
+    echo -e "${YELLOW}Check status with: sudo systemctl status smbd${RESET}"
+    echo -e "${YELLOW}Check logs with: sudo journalctl -u smbd -n 50${RESET}"
+    exit 1
+fi
+line
+# --- ⭐ END: FIXED VALIDATE AND RESTART BLOCK ⭐ ---
+
 
 # --- Summary ---
 IP_ADDR=$(hostname -I | awk '{print $1}')
@@ -112,11 +140,16 @@ echo ""
 echo -e "${BOLD}💡 Access them from another device using:${RESET}"
 echo -e "   \\\\${YELLOW}${IP_ADDR}${RESET}\\\\<foldername>"
 echo ""
+
+# --- ⭐ START: FIXED EXAMPLE SHARES LOOP ⭐ ---
 echo -e "${BOLD}Example shares:${RESET}"
 for dir in "${MNT_FOLDERS[@]}"; do
   sharename=$(basename "$dir")
-  echo -e "   📂 \\${IP_ADDR}\\${YELLOW}${sharename}${RESET}"
+  # Use printf for safer formatting that correctly handles colors and slashes
+  printf "   📂 \\\\%s\\\\%s%s%s\n" "$IP_ADDR" "$YELLOW" "$sharename" "$RESET"
 done
+# --- ⭐ END: FIXED EXAMPLE SHARES LOOP ⭐ ---
+
 echo ""
 line
 echo -e "${GREEN}✨ Done! Happy sharing!${RESET}"
