@@ -1,126 +1,159 @@
 #!/bin/bash
-# =============================================================
-# 🧩 SMB Share Selector (for non-interactive smb-setup)
-# =============================================================
-# This script provides a 'whiptail' TUI to select drives and
-# set a password. It then calls 'smb-setup.sh' with that info.
+# Interactively find and add unmounted drives to /etc/fstab using whiptail.
+# This script will automatically request sudo privileges if not run as root.
+
 set -e
 
-# --- Colors ---
+# --- Colors (for terminal fallback/logs) ---
 RED="\e[31m"
 GREEN="\e[32m"
 YELLOW="\e[33m"
 BLUE="\e[36m"
-RESET="\e[0m"
 BOLD="\e[1m"
+RESET="\e[0m"
 
-# Get the directory where this script is located
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+# --- Sudo-Launcher ---
+if [ "$EUID" -ne 0 ]; then
+  echo -e "${YELLOW}ℹ️ This script needs administrative privileges.${RESET}"
+  echo -e "${BLUE}Attempting to re-run with sudo...${RESET}"
+  sudo bash "$0" "$@"
+  exit $?
+fi
 
-# --- Ensure dependencies ---
-PACKAGES_TO_INSTALL=()
+# --- If we reach this point, we are running as root ---
 
-# Check for whiptail
+# --- Check/Install whiptail ---
 if ! command -v whiptail >/dev/null 2>&1; then
-  PACKAGES_TO_INSTALL+=("whiptail")
+  echo -e "${YELLOW}📦 whiptail not found. Installing...${RESET}"
+  apt-get update && apt-get install -y whiptail
+  echo -e "${GREEN}✅ whiptail installed.${RESET}"
 fi
 
-# Check for Samba commands
-if ! command -v smbd >/dev/null 2>&1 || ! command -v smbpasswd >/dev/null 2>&1; then
-  PACKAGES_TO_INSTALL+=("samba")
+# --- Backup fstab ---
+if [ ! -f /etc/fstab.bak ]; then
+  cp /etc/fstab /etc/fstab.bak
+  whiptail --title "Backup" --msgbox "Created /etc/fstab.bak as a safety backup." 8 78
 fi
 
-# Remove duplicates (in case we add 'samba' twice, etc.)
-UNIQUE_PACKAGES=($(echo "${PACKAGES_TO_INSTALL[@]}" | tr ' ' '\n' | sort -u))
+whiptail --title "Auto-Mount Setup" --msgbox "Welcome! This script will help you find and auto-mount new drives.\n\nIt will scan for partitions that are not in /etc/fstab or currently mounted." 10 78
 
-if [ ${#UNIQUE_PACKAGES[@]} -ne 0 ]; then
-  echo -e "${YELLOW}⚙️ Installing missing dependencies: ${UNIQUE_PACKAGES[*]}...${RESET}"
-  # Ensure we have sudo/root privileges for this
-  if [ "$EUID" -ne 0 ]; then
-    sudo apt update -y
-    sudo apt install -y "${UNIQUE_PACKAGES[@]}"
-  else
-    apt update -y
-    apt install -y "${UNIQUE_PACKAGES[@]}"
+# --- Find eligible partitions ---
+# We need to store details. We'll use an associative array.
+declare -A DRIVE_DETAILS
+# This will hold the options for the whiptail checklist
+WHIPTAIL_OPTIONS=()
+
+PART_COUNT=0
+while read -r part_line; do
+  # Parse the line from lsblk
+  read -r NAME FSTYPE UUID LABEL SIZE <<<"$part_line"
+
+  # 1. Check if already in fstab by UUID
+  if grep -q "UUID=$UUID" /etc/fstab; then
+    continue
   fi
-  echo -e "${GREEN}✅ Dependencies installed.${RESET}"
-fi
 
-# --- List available drives correctly ---
-# We look for 'disk' or 'nvme' types
-DRIVES_RAW=$(lsblk -dn -o NAME,SIZE,TYPE | grep -E "disk|nvme")
-OPTIONS=()
+  # 2. Check if mounted (even if not in fstab)
+  if findmnt -n "$NAME" > /dev/null; then
+    continue
+  fi
 
-while read -r line; do
-    name=$(echo "$line" | awk '{print $1}')
-    size=$(echo "$line" | awk '{print $2}')
-    label="$name ($size)"
-    # Format for whiptail: "TAG" "DESCRIPTION" "ON/OFF"
-    OPTIONS+=("$name" "$label" "OFF")
-done <<< "$DRIVES_RAW"
+  # --- We found a valid drive ---
+  PART_COUNT=$((PART_COUNT + 1))
+  
+  # Store details for later. We use NAME as the key.
+  DRIVE_DETAILS[$NAME]="$UUID|$FSTYPE|$LABEL"
+  
+  # Build the checklist option: <tag> <item> <status>
+  DRIVE_INFO="${LABEL:-<no label>} ($SIZE, $FSTYPE)"
+  WHIPTAIL_OPTIONS+=("$NAME" "$DRIVE_INFO" "OFF")
 
-if [ ${#OPTIONS[@]} -eq 0 ]; then
-    echo -e "${RED}❌ No physical drives (disk/nvme) found. Exiting.${RESET}"
-    exit 1
-fi
+done < <(lsblk -fpo NAME,FSTYPE,UUID,LABEL,SIZE | awk 'NR>1 && $2!="" && $2!="swap" && $3!=""')
 
-# --- Whiptail drive selection ---
-SELECTED=$(whiptail --title "Select Drives to Share" --checklist \
-"Select the drives you want to share (SPACE = select, ENTER = confirm)" 20 80 10 \
-"${OPTIONS[@]}" 3>&1 1>&2 2>&3)
-
-# Exit if user pressed Cancel
-if [ $? -ne 0 ]; then
-  echo -e "${RED}❌ Cancelled. Exiting.${RESET}"
-  exit 1
-fi
-
-SELECTED=$(echo $SELECTED | tr -d '"')
-
-if [ -z "$SELECTED" ]; then
-    echo -e "${RED}❌ No drives selected. Exiting.${RESET}"
-    exit 1
-fi
-
-# --- Collect top-level mount points (parent folders) ---
-MNT_FOLDERS=()
-for drive in $SELECTED; do
-    # Find all mountpoints for partitions on the selected drive
-    # e.g., /dev/sdb -> /dev/sdb1 -> /mnt/storage
-    while read -r part mount; do
-        [ -z "$mount" ] && continue
-        [ -d "$mount" ] && MNT_FOLDERS+=("$mount")
-    done < <(lsblk -ln -o NAME,MOUNTPOINT "/dev/$drive")
-done
-
-# Ensure mount points are unique
-MNT_FOLDERS=($(echo "${MNT_FOLDERS[@]}" | tr ' ' '\n' | sort -u))
-
-if [ ${#MNT_FOLDERS[@]} -eq 0 ]; then
-  echo -e "${RED}❌ No mounted folders found on selected drives.${RESET}"
-  echo -e "${YELLOW}Please mount the partitions first (you can use 'setup-mounts.sh'). Exiting.${RESET}"
+if [ $PART_COUNT -eq 0 ]; then
+  whiptail --title "No Drives Found" --msgbox "No new, unmounted, or unconfigured drives were found." 8 78
   exit 0
 fi
 
-# --- Prompt for SMB password ---
-SMB_PASSWORD=$(whiptail --title "Samba Password" --passwordbox "Enter a password for your Samba user (will be set/updated):" 10 60 3>&1 1>&2 2>&3)
+# --- Show Checklist ---
+# The result is returned as a quoted string, e.g., "/dev/sdb1" "/dev/sdc1"
+SELECTED_DRIVES_STR=$(whiptail --title "Select Partitions to Mount" --checklist \
+  "Use SPACE to select drives you wish to auto-mount:" 20 78 10 \
+  "${WHIPTAIL_OPTIONS[@]}" 3>&1 1>&2 2>&3)
 
-if [ $? -ne 0 ] || [ -z "$SMB_PASSWORD" ]; then
-  echo -e "${RED}❌ No password entered or Cancelled. Exiting.${RESET}"
-  exit 1
+# Exit if user pressed Cancel
+if [ $? -ne 0 ]; then
+  whiptail --title "Cancelled" --msgbox "No changes were made." 8 78
+  exit 0
 fi
 
-echo -e "${GREEN}✅ Information collected. Calling setup script...${RESET}"
-echo -e "${BLUE}------------------------------------------------------------${RESET}"
+# Convert the quoted string into a bash array
+eval "SELECTED_DRIVES=($SELECTED_DRIVES_STR)"
 
-# --- Call the setup script ---
-SETUP_SCRIPT="$SCRIPT_DIR/smb-setup.sh"
+# --- Process Selections ---
+FINAL_REPORT="Mounting process complete.\n\nSummary:\n"
 
-if [ ! -f "$SETUP_SCRIPT" ]; then
-    echo -e "${RED}❌ Error: '$SETUP_SCRIPT' not found!${RESET}"
-    echo -e "${YELLOW}Please make sure both scripts are in the same directory.${RESET}"
-    exit 1
-fi
+for DEVICE in "${SELECTED_DRIVES[@]}"; do
+  # Retrieve details from our associative array
+  IFS='|' read -r UUID FSTYPE LABEL <<< "${DRIVE_DETAILS[$DEVICE]}"
+  
+  # Suggest a mount point
+  SUGGESTED_NAME=$(basename "$DEVICE")
+  DEFAULT_MNT="/mnt/${LABEL:-$SUGGESTED_NAME}"
 
-# Call the setup script with the password and selected mount points as arguments
-"$SETUP_SCRIPT" "$SMB_PASSWORD" "${MNT_FOLDERS[@]}"
+  # --- Ask for Mount Point ---
+  MNT_PATH=$(whiptail --title "Mount Point for $DEVICE" --inputbox \
+    "Where do you want to mount this drive?" 10 78 "$DEFAULT_MNT" \
+    3>&1 1>&2 2>&3)
+
+  if [ -z "$MNT_PATH" ]; then
+    FINAL_REPORT+="  - $DEVICE: Skipped (no mount path provided)\n"
+    continue
+  fi
+  
+  # Validate path
+  if [[ "$MNT_PATH" != "/mnt/"* && "$MNT_PATH" != "/media/"* ]]; then
+    whiptail --title "Error" --msgbox "Invalid path: $MNT_PATH\n\nMount point must start with /mnt/ or /media/.\nSkipping this drive." 10 78
+    FINAL_REPORT+="  - $DEVICE: Failed (Invalid path)\n"
+    continue
+  fi
+
+  # --- Get Options ---
+  OPTIONS="defaults"
+  FSTYPE_FINAL=$FSTYPE
+  if [ "$FSTYPE" == "ntfs" ]; then
+    FSTYPE_FINAL="ntfs-3g"
+  fi
+  
+  # --- Perform Actions ---
+  whiptail --title "Configuring $DEVICE" --infobox "Configuring $MNT_PATH..." 8 78
+  sleep 1 # Give user time to read
+
+  try
+    # 1. Create directory
+    mkdir -p "$MNT_PATH"
+
+    # 2. Add to fstab
+    FSTAB_LINE="UUID=$UUID $MNT_PATH $FSTYPE_FINAL $OPTIONS 0 2"
+    echo "$FSTAB_LINE" >> /etc/fstab
+
+    # 3. Mount it now
+    mount "$MNT_PATH"
+
+    # --- 4. Double-Check Verification ---
+    if findmnt -n "$MNT_PATH" > /dev/null; then
+      whiptail --title "Success" --msgbox "✅ Successfully mounted $DEVICE to $MNT_PATH." 8 78
+      FINAL_REPORT+="  - $DEVICE: OK ($MNT_PATH)\n"
+    else
+      whiptail --title "Error" --msgbox "❌ Mount Failed! $DEVICE was added to /etc/fstab, but could not be mounted.\n\nPlease check your fstab entry." 10 78
+      FINAL_REPORT+="  - $DEVICE: FAILED to mount ($MNT_PATH)\n"
+    fi
+  
+  catch
+    whiptail --title "Error" --msgbox "❌ An unexpected error occurred while processing $DEVICE." 8 78
+    FINAL_REPORT+="  - $DEVICE: FAILED (Unexpected error)\n"
+  fi
+done
+
+# --- Final Report ---
+whiptail --title "All Done!" --msgbox "$FINAL_REPORT" 20 78
