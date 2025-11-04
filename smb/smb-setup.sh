@@ -141,14 +141,15 @@ echo -e "${BOLD}💡 Access them from another device using:${RESET}"
 echo -e "   \\\\${YELLOW}${IP_ADDR}${RESET}\\\\<foldername>"
 echo ""
 
-# --- ⭐ START: FIXED EXAMPLE SHARES LOOP ⭐ ---
+# --- ⭐ START: FINAL FIXED EXAMPLE SHARES LOOP ⭐ ---
 echo -e "${BOLD}Example shares:${RESET}"
 for dir in "${MNT_FOLDERS[@]}"; do
   sharename=$(basename "$dir")
-  # Use printf for safer formatting that correctly handles colors and slashes
-  printf "   📂 \\\\%s\\\\%s%s%s\n" "$IP_ADDR" "$YELLOW" "$sharename" "$RESET"
+  # Print the static parts first, then the colored part
+  echo -en "   📂 \\\\${IP_ADDR}\\"
+  echo -e "${YELLOW}${sharename}${RESET}"
 done
-# --- ⭐ END: FIXED EXAMPLE SHARES LOOP ⭐ ---
+# --- ⭐ END: FINAL FIXED EXAMPLE SHARES LOOP ⭐ ---
 
 echo ""
 line
