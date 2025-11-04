@@ -22,11 +22,6 @@ if [ ! -f "$MARKER_FILE" ]; then
     ##############################
     echo "=== Phase 1: Running before reboot ==="
 
-    # Pre-reboot setup scripts
-    bash "$SCRIPT_DIR/cockpit/select-modules.sh"
-    bash "$SCRIPT_DIR/docker/docker-setup.sh"
-    bash "$SCRIPT_DIR/smb/select-smb-shares.sh"
-
     # -------------------------------------------------------------------
     # User input
     BACKUP_LOCATION=$(whiptail --inputbox "Enter the backup directory:" 10 70 "/mnt/st/system-backup-$(date +%F)" 3>&1 1>&2 2>&3)
@@ -49,7 +44,12 @@ if [ ! -f "$MARKER_FILE" ]; then
     CONTAINERS_DIR="$RESTORE_DIR/containers"
     STACKS_DIR="/opt/stacks"
 
-    # -------------------------------------------------------------------
+
+    # Pre-reboot setup scripts
+    bash "$SCRIPT_DIR/cockpit/select-modules.sh"
+    bash "$SCRIPT_DIR/docker/docker-setup.sh"
+    bash "$SCRIPT_DIR/smb/select-smb-shares.sh"
+
     # Save variables for phase 2
     {
         echo "BACKUP_LOCATION=\"$BACKUP_LOCATION\""
@@ -59,7 +59,6 @@ if [ ! -f "$MARKER_FILE" ]; then
         echo "CONTAINERS_DIR=\"$CONTAINERS_DIR\""
     } > "$MARKER_FILE"
 
-    # -------------------------------------------------------------------
     # Create systemd service for resuming after reboot
     echo "Creating systemd resume service..."
     sudo tee "$SERVICE_FILE" > /dev/null <<EOF
@@ -92,7 +91,7 @@ else
     source "$MARKER_FILE"
 
     # Post-reboot setup
-    bash "$SCRIPT_DIR/dockge/dockge-setup.sh"
+    bash "$SCRIPT_DIR/dockge/dockge-base-setup.sh"
 
     # Run restore steps
     bash "$SCRIPT_DIR/dockge/restore-dockge-containers.sh" "$STACKS_DIR" "$BACKUP_LOCATION" "$CONTAINERS_VAR_NAME"
