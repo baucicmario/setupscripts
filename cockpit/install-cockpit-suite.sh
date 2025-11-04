@@ -33,11 +33,12 @@ if [ $# -eq 0 ]; then
 fi
 SELECTED="$@"
 
-# 🧱 Install Cockpit core
-echo -e "${BLUE}📦 Installing Cockpit core...${RESET}"
+# 🧱 Install Cockpit core & Dependencies
+echo -e "${BLUE}📦 Installing Cockpit core & script dependencies (jq)...${RESET}"
 sudo apt update -y
-sudo apt install -y -t ${CODENAME}-backports cockpit
-echo -e "${GREEN}✅ Cockpit core installed.${RESET}"
+# Install jq (for parsing GitHub API) AND cockpit
+sudo apt install -y -t ${CODENAME}-backports cockpit jq
+echo -e "${GREEN}✅ Cockpit core and dependencies installed.${RESET}"
 line
 
 
