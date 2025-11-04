@@ -85,7 +85,12 @@ else
     bash "$SCRIPT_DIR/dockge/restore-dockge-containers.sh" "$STACKS_DIR" "$BACKUP_LOCATION" "$CONTAINERS_VAR_NAME"
     bash "$SCRIPT_DIR/immich/restoreimmich.sh" "$BACKUP_LOCATION" "$RESTORE_DIR" "$CONTAINERS_DIR"
 
-    # Optional redundant calls removed (to avoid duplication)
+    # -----------------------------------------------------------------
+    # Start all containers
+    # -----------------------------------------------------------------
+    echo "Attempting to start all Docker containers..."
+    docker ps -aq | xargs -r docker start
+    echo "Container startup command executed."
 
     # -----------------------------------------------------------------
     # Cleanup marker and cron
