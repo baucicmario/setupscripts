@@ -15,9 +15,10 @@ if [ ! -f "$MARKER_FILE" ]; then
     echo "=== Phase 1: Running before reboot ==="
 
     # Run setup scripts
+    bash "$SCRIPT_DIR/mount/setup-mounts.sh"
+    bash "$SCRIPT_DIR/smb/select-smb-shares.sh"
     bash "$SCRIPT_DIR/cockpit/select-modules.sh"
     bash "$SCRIPT_DIR/docker/docker-setup.sh"
-    bash "$SCRIPT_DIR/smb/select-smb-shares.sh"
 
     # -----------------------------------------------------------------
     # Prompt user inputs
