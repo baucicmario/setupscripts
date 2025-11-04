@@ -40,6 +40,33 @@ sudo apt install -y -t ${CODENAME}-backports cockpit
 echo -e "${GREEN}✅ Cockpit core installed.${RESET}"
 line
 
+
+# 🧩 45Drives fallback installer
+install_45drives_deb() {
+  local repo="$1"
+  local pattern="$2"
+  local name="$3"
+
+  echo -e "${BLUE}🔍 Checking latest release for ${repo}...${RESET}"
+  local url=$(curl -s "https://api.github.com/repos/45Drives/${repo}/releases/latest" \
+              | jq -r '.assets[]?.browser_download_url' | grep -E "$pattern" | head -n1)
+
+  if [[ -z "$url" ]]; then
+    url=$(curl -s "https://api.github.com/repos/45Drives/${repo}/releases" \
+          | jq -r '.[0].assets[]?.browser_download_url' | grep -E 'bookworm.*\.deb' | head -n1)
+  fi
+
+  if [[ -z "$url" ]]; then
+    echo -e "${RED}❌ No .deb found for ${repo}.${RESET}"
+    return
+  fi
+
+  echo -e "${BLUE}⬇️ Installing ${name} from ${repo}...${RESET}"
+  curl -L -o "${TMP_DIR}/${repo}.deb" "$url"
+  sudo dpkg -i "${TMP_DIR}/${repo}.deb" || sudo apt install -yf
+  echo -e "${GREEN}✅ Installed ${name}.${RESET}"
+}
+
 # 🧩 Install selected modules
 if [ -z "$SELECTED" ]; then
   echo -e "${YELLOW}⏩ No optional modules selected.${RESET}"
@@ -84,32 +111,6 @@ else
     fi
   done
 fi
-
-# 🧩 45Drives fallback installer
-install_45drives_deb() {
-  local repo="$1"
-  local pattern="$2"
-  local name="$3"
-
-  echo -e "${BLUE}🔍 Checking latest release for ${repo}...${RESET}"
-  local url=$(curl -s "https://api.github.com/repos/45Drives/${repo}/releases/latest" \
-              | jq -r '.assets[]?.browser_download_url' | grep -E "$pattern" | head -n1)
-
-  if [[ -z "$url" ]]; then
-    url=$(curl -s "https://api.github.com/repos/45Drives/${repo}/releases" \
-          | jq -r '.[0].assets[]?.browser_download_url' | grep -E 'bookworm.*\.deb' | head -n1)
-  fi
-
-  if [[ -z "$url" ]]; then
-    echo -e "${RED}❌ No .deb found for ${repo}.${RESET}"
-    return
-  fi
-
-  echo -e "${BLUE}⬇️ Installing ${name} from ${repo}...${RESET}"
-  curl -L -o "${TMP_DIR}/${repo}.deb" "$url"
-  sudo dpkg -i "${TMP_DIR}/${repo}.deb" || sudo apt install -yf
-  echo -e "${GREEN}✅ Installed ${name}.${RESET}"
-}
 
 line
 
