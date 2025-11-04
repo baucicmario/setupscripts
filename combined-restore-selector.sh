@@ -16,7 +16,7 @@ if [ ! -f "$MARKER_FILE" ]; then
     # Your pre-reboot commands here
     bash ./cockpit/select-modules.sh
     bash ./docker/docker-setup.sh
-    bash ./smb/smb-setup.sh
+    bash ./smb/select-smb-shares.sh
 
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
