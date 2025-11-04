@@ -34,12 +34,12 @@ fi
 SELECTED="$@"
 
 # 🧱 Install Cockpit core & Dependencies
-#echo -e "${BLUE}📦 Installing Cockpit core & script dependencies (jq)...${RESET}"
-#sudo apt update -y
+echo -e "${BLUE}📦 Installing Cockpit core & script dependencies (jq)...${RESET}"
+sudo apt update -y
 # Install jq (for parsing GitHub API) AND cockpit
-#sudo apt install -y -t ${CODENAME}-backports cockpit jq
-#echo -e "${GREEN}✅ Cockpit core and dependencies installed.${RESET}"
-#line
+sudo apt install -y -t ${CODENAME}-backports cockpit jq
+echo -e "${GREEN}✅ Cockpit core and dependencies installed.${RESET}"
+line
 
 
 # 🧩 45Drives fallback installer

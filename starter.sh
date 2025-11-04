@@ -16,7 +16,7 @@ if [ $exitstatus = 0 ]; then
     if [ "$CHOICE" = "backup" ]; then
         bash ./combined-backup-selector.sh
     elif [ "$CHOICE" = "restore" ]; then
-        bash ./new-restore.sh
+        bash ./combined-restore-selector.sh
     fi
 else
     echo "Cancelled."

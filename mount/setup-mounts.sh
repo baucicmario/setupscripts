@@ -20,6 +20,13 @@ fi
 
 # --- If we reach this point, we are running as root ---
 
+# --- Check/Install whiptail ---
+if ! command -v whiptail >/dev/null 2>&1; then
+  echo -e "${YELLOW}📦 whiptail not found. Installing...${RESET}"
+  apt-get update && apt-get install -y whiptail
+  echo -e "${GREEN}✅ whiptail installed.${RESET}"
+fi
+
 # --- Backup fstab ---
 if [ ! -f /etc/fstab.bak ]; then
   cp /etc/fstab /etc/fstab.bak

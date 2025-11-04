@@ -6,10 +6,27 @@ set -e
 RED="\e[31m"; GREEN="\e[32m"; YELLOW="\e[33m"; BLUE="\e[36m"; RESET="\e[0m"; BOLD="\e[1m"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
+# --- Ensure dependencies ---
+PACKAGES_TO_INSTALL=()
 
-#echo -e "${YELLOW}⚙️ Attempting to install samba...${RESET}"
-#sudo apt update -y
-#sudo apt install -y samba
+# Check for whiptail
+if ! command -v whiptail >/dev/null 2>&1; then
+  PACKAGES_TO_INSTALL+=("whiptail")
+fi
+
+# Check for Samba commands
+if ! command -v smbd >/dev/null 2>&1 || ! command -v smbpasswd >/dev/null 2>&1; then
+  PACKAGES_TO_INSTALL+=("samba")
+fi
+
+# Remove duplicates (in case we add 'samba' twice, etc.)
+UNIQUE_PACKAGES=($(echo "${PACKAGES_TO_INSTALL[@]}" | tr ' ' '\n' | sort -u))
+
+if [ ${#UNIQUE_PACKAGES[@]} -ne 0 ]; then
+  echo -e "${YELLOW}⚙️ Installing missing dependencies: ${UNIQUE_PACKAGES[*]}...${RESET}"
+  sudo apt update -y
+  sudo apt install -y "${UNIQUE_PACKAGES[@]}"
+fi
 
 # --- List available drives correctly ---
 DRIVES_RAW=$(lsblk -dn -o NAME,SIZE,TYPE | grep -E "disk|nvme")
