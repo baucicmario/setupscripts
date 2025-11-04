@@ -60,7 +60,6 @@ if [ ! -f "$MARKER_FILE" ]; then
 
     #----------------------------------------------------------------------------------------------------------------------------------------------
     # Create marker to indicate post-reboot continuation
-    touch "$MARKER_FILE"
     # Schedule this script to run at reboot
     echo "Scheduling continuation after reboot..."
     sudo bash -c "echo '@reboot root \"$SCRIPT_PATH\"' > /etc/cron.d/self_resume"
