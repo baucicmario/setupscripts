@@ -1,5 +1,6 @@
 #!/bin/bash
-# Interactively find and add unmounted drives to /etc/fstab for auto-mounting.
+# Interactively find and add unmounted drives to /etc/fstab.
+# This script will automatically request sudo privileges if not run as root.
 
 set -e
 
@@ -13,14 +14,25 @@ RESET="\e[0m"
 
 line() { echo -e "${BLUE}------------------------------------------------------------${RESET}"; }
 
-echo -e "${BOLD}${GREEN}🔧 Interactive Auto-Mount Setup${RESET}"
-line
-
-# --- Root Check ---
+# --- Sudo-Launcher ---
+# If not running as root, re-launch this script with sudo
 if [ "$EUID" -ne 0 ]; then
-  echo -e "${RED}❌ This script must be run as root (or with sudo).${RESET}"
-  exit 1
+  echo -e "${YELLOW}ℹ️ This script needs administrative privileges.${RESET}"
+  echo -e "${BLUE}Attempting to re-run with sudo...${RESET}"
+  
+  # Re-execute this script with sudo, passing all original arguments
+  # Using "sudo bash" is a robust way to ensure it's executed by bash
+  sudo bash "$0" "$@"
+  
+  # Exit the original, non-privileged script
+  exit $?
 fi
+
+# --- If we reach this point, we are running as root ---
+
+echo -e "${BOLD}${GREEN}🔧 Interactive Auto-Mount Setup${RESET}"
+echo -e "${GREEN}✅ Running with administrative privileges.${RESET}"
+line
 
 # --- Backup fstab ---
 if [ ! -f /etc/fstab.bak ]; then
@@ -32,8 +44,7 @@ fi
 line
 
 # --- Find eligible partitions ---
-# We look for partitions that have a UUID and a Filesystem, but are not 'swap'.
-# We read this into an array to avoid subshell issues with 'while read'.
+# Read partitions into an array
 readarray -t PARTITIONS < <(lsblk -fpo NAME,FSTYPE,UUID,LABEL,SIZE | awk 'NR>1 && $2!="" && $2!="swap" && $3!=""')
 
 if [ ${#PARTITIONS[@]} -eq 0 ]; then
@@ -55,7 +66,6 @@ for part_line in "${PARTITIONS[@]}"; do
   fi
 
   # 2. Check if mounted (even if not in fstab)
-  # This avoids trying to mount a drive that's already mounted manually.
   if findmnt -n "$NAME" > /dev/null; then
     echo -e "${GREEN}ℹ️ Skipping $NAME (${LABEL:-no label}): Already mounted.${RESET}"
     continue
@@ -78,7 +88,6 @@ for part_line in "${PARTITIONS[@]}"; do
 
   if [[ "$REPLY" =~ ^[Yy]$ ]]; then
     # --- Get Mount Point ---
-    # Suggest a default mount point, e.g., /mnt/Storage or /mnt/sdb1
     SUGGESTED_NAME=$(basename "$NAME")
     DEFAULT_MNT="/mnt/${LABEL:-$SUGGESTED_NAME}"
 
@@ -107,25 +116,32 @@ for part_line in "${PARTITIONS[@]}"; do
 
     # --- Perform Actions ---
     echo -e "${BLUE}⚙️ Configuring auto-mount...${RESET}"
-    try
-      # 1. Create directory
-      echo "  -> Creating directory: $MNT_PATH"
-      mkdir -p "$MNT_PATH"
+    
+    # 1. Create directory
+    echo "  -> Creating directory: $MNT_PATH"
+    if ! mkdir -p "$MNT_PATH"; then
+        echo -e "${RED}❌ Failed to create directory. Skipping.${RESET}"
+        continue
+    fi
 
-      # 2. Add to fstab
-      echo "  -> Adding to /etc/fstab"
-      FSTAB_LINE="UUID=$UUID $MNT_PATH $FSTYPE $OPTIONS 0 2"
-      echo "$FSTAB_LINE" >> /etc/fstab
+    # 2. Add to fstab
+    echo "  -> Adding to /etc/fstab"
+    FSTAB_LINE="UUID=$UUID $MNT_PATH $FSTYPE $OPTIONS 0 2"
+    
+    # Use tee -a to append as root. This is safer than 'echo ... >>'
+    if ! echo "$FSTAB_LINE" | tee -a /etc/fstab > /dev/null; then
+        echo -e "${RED}❌ Failed to write to /etc/fstab. Skipping.${RESET}"
+        continue
+    fi
 
-      # 3. Mount it now
-      echo "  -> Attempting to mount..."
-      mount "$MNT_PATH"
-
-      echo -e "${GREEN}✅ Successfully mounted $NAME to $MNT_PATH.${RESET}"
-
-    catch
-      echo -e "${RED}❌ An error occurred. Failed to configure $MNT_PATH.${RESET}"
-      echo -e "${YELLOW}Check /etc/fstab for the last line and remove it if necessary.${RESET}"
+    # 3. Mount it now
+    echo "  -> Attempting to mount..."
+    if ! mount "$MNT_PATH"; then
+        echo -e "${RED}❌ Mount failed!${RESET}"
+        echo -e "${YELLOW}Please check /etc/fstab for the new line and manually debug.${RESET}"
+        echo -e "${YELLOW}The entry '$FSTAB_LINE' may be incorrect.${RESET}"
+    else
+        echo -e "${GREEN}✅ Successfully mounted $NAME to $MNT_PATH.${RESET}"
     fi
   else
     echo -e "${YELLOW}Skipping $NAME.${RESET}"
