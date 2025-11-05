@@ -78,9 +78,9 @@ STACKS_DIR=$(browse_folder "$PWD" "Select Dockge Stacks Folder" "Example: /opt/s
 STACKS_DIR=$(clean_path "$STACKS_DIR")
 [ -z "$STACKS_DIR" ] && { echo -e "${RED}No stacks dir selected.${RESET}"; exit 1; }
 
-MAIN_BACKUP_DEST=$(browse_folder "$PWD" "Select Main Backup Destination Folder" "Where backups will be stored")
-MAIN_BACKUP_DEST=$(clean_path "$MAIN_BACKUP_DEST")
-[ -z "$MAIN_BACKUP_DEST" ] && { echo -e "${RED}No backup destination selected.${RESET}"; exit 1; }
+BACKUP_LOCATION=$(browse_folder "$PWD" "Select Main Backup Destination Folder" "Where backups will be stored")
+BACKUP_LOCATION=$(clean_path "$BACKUP_LOCATION")
+[ -z "$BACKUP_LOCATION" ] && { echo -e "${RED}No backup destination selected.${RESET}"; exit 1; }
 
 CONTAINERS_VAR_NAME=$(dialog --inputbox "Enter Dockge .env variable name for containers root:" 10 60 "CONTAINERS_ROOT" 2>&1 >/dev/tty)
 clear
@@ -115,7 +115,7 @@ COMPOSE_DIR="$COMPOSE_DIR"
 STACKS_DIR="$STACKS_DIR"
 CONTAINERS_VAR_NAME="$CONTAINERS_VAR_NAME"
 CONTAINERS_PATH="$CONTAINERS_PATH"
-MAIN_BACKUP_DEST="$MAIN_BACKUP_DEST"
+BACKUP_LOCATION="$BACKUP_LOCATION"
 EOF
 
 # --- Display summary ---
@@ -129,4 +129,4 @@ echo "COMPOSE_DIR=$COMPOSE_DIR"
 echo "STACKS_DIR=$STACKS_DIR"
 echo "CONTAINERS_VAR_NAME=$CONTAINERS_VAR_NAME"
 echo "CONTAINERS_PATH=$CONTAINERS_PATH"
-echo "MAIN_BACKUP_DEST=$MAIN_BACKUP_DEST"
+echo "BACKUP_LOCATION=$BACKUP_LOCATION"
